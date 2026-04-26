@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+echo "[pre-commit] Running OpenCity test suite..."
+if ! bash "$REPO_ROOT/Tools/run_tests.sh"; then
+    echo ""
+    echo "[pre-commit] Tests FAILED — commit blocked."
+    echo "  Fix all test failures before committing."
+    echo "  To bypass in an emergency: git commit --no-verify"
+    exit 1
+fi
+echo "[pre-commit] All tests passed."
