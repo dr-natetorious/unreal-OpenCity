@@ -67,6 +67,24 @@ eal.save_asset('/Game/Input/IA_Foot_Jump')
 
 print('[setup] Input actions: IA_Foot_Move (Axis2D), IA_Foot_Look (Axis2D), IA_Foot_Jump (Axis1D)')
 
+# ── Shared interact action ─────────────────────────────────────────────────────
+
+ia_interact = get_or_create('IA_Interact', '/Game/Input', unreal.InputAction, unreal.InputAction_Factory)
+ia_interact.set_editor_property('value_type', unreal.InputActionValueType.BOOLEAN)
+eal.save_asset('/Game/Input/IA_Interact')
+
+# ── Vehicle input actions ──────────────────────────────────────────────────────
+
+ia_throttle = get_or_create('IA_Vehicle_Throttle', '/Game/Input', unreal.InputAction, unreal.InputAction_Factory)
+ia_throttle.set_editor_property('value_type', unreal.InputActionValueType.AXIS1D)
+eal.save_asset('/Game/Input/IA_Vehicle_Throttle')
+
+ia_steer = get_or_create('IA_Vehicle_Steer', '/Game/Input', unreal.InputAction, unreal.InputAction_Factory)
+ia_steer.set_editor_property('value_type', unreal.InputActionValueType.AXIS1D)
+eal.save_asset('/Game/Input/IA_Vehicle_Steer')
+
+print('[setup] Vehicle actions: IA_Interact (Boolean), IA_Vehicle_Throttle (Axis1D), IA_Vehicle_Steer (Axis1D)')
+
 # ── Input Mapping Context ──────────────────────────────────────────────────────
 
 imc = get_or_create('IMC_Foot', '/Game/Input', unreal.InputMappingContext, unreal.InputMappingContext_Factory)
@@ -77,16 +95,31 @@ imc = get_or_create('IMC_Foot', '/Game/Input', unreal.InputMappingContext, unrea
 #   D → +X:  raw (1,0,0) already correct, no modifier
 #   A → -X:  negate
 imc.set_editor_property('mappings', [
-    make_mapping(imc, ia_move, 'W',         [swizzle_yxz(imc)]),
-    make_mapping(imc, ia_move, 'S',         [negate(imc), swizzle_yxz(imc)]),
-    make_mapping(imc, ia_move, 'D'),
-    make_mapping(imc, ia_move, 'A',         [negate(imc)]),
-    make_mapping(imc, ia_look, 'Mouse2D'),
-    make_mapping(imc, ia_jump, 'SpaceBar'),
+    make_mapping(imc, ia_move,     'W',         [swizzle_yxz(imc)]),
+    make_mapping(imc, ia_move,     'S',         [negate(imc), swizzle_yxz(imc)]),
+    make_mapping(imc, ia_move,     'D'),
+    make_mapping(imc, ia_move,     'A',         [negate(imc)]),
+    make_mapping(imc, ia_look,     'Mouse2D'),
+    make_mapping(imc, ia_jump,     'SpaceBar'),
+    make_mapping(imc, ia_interact, 'E'),
 ])
 
 eal.save_asset('/Game/Input/IMC_Foot')
-print('[setup] IMC_Foot: WASD move, Mouse2D look, Space jump')
+print('[setup] IMC_Foot: WASD move, Mouse2D look, Space jump, E interact')
+
+# ── Vehicle Mapping Context ────────────────────────────────────────────────────
+
+imc_v = get_or_create('IMC_Vehicle', '/Game/Input', unreal.InputMappingContext, unreal.InputMappingContext_Factory)
+imc_v.set_editor_property('mappings', [
+    make_mapping(imc_v, ia_throttle, 'W'),
+    make_mapping(imc_v, ia_throttle, 'S', [negate(imc_v)]),
+    make_mapping(imc_v, ia_steer,    'D'),
+    make_mapping(imc_v, ia_steer,    'A', [negate(imc_v)]),
+    make_mapping(imc_v, ia_interact, 'E'),
+])
+
+eal.save_asset('/Game/Input/IMC_Vehicle')
+print('[setup] IMC_Vehicle: W/S throttle, A/D steer, E exit')
 
 # ── Floor (add to current level if not already present) ───────────────────────
 
@@ -109,9 +142,39 @@ for actor in aas.get_all_level_actors():
 
 lvl.save_current_level()
 print('[setup] Floor: 200x200m at Z=-50, PlayerStart at Z=100')
+
+# ── City blocks (3×3 grid, skip centre — that's the player spawn area) ────────
+
+# CityBlockActor world position: each cell is 10,000 UU (100m) wide
+# Cell (cx,cy) → world offset (cx*10000, cy*10000, 0)
+CELL_SIZE_UU = 10000
+
+block_class = unreal.load_class(None, '/Script/OpenCity.CityBlockActor')
+
+# Collect already-placed blocks by (cell_x, cell_y) so the script stays idempotent
+existing_blocks = {}
+for actor in aas.get_all_level_actors():
+    if actor.get_class() == block_class:
+        cx = actor.get_editor_property('cell_x')
+        cy = actor.get_editor_property('cell_y')
+        existing_blocks[(cx, cy)] = actor
+
+for cx in range(-1, 2):
+    for cy in range(-1, 2):
+        if cx == 0 and cy == 0:
+            continue  # keep player spawn area clear
+        if (cx, cy) in existing_blocks:
+            continue  # already placed — skip
+
+        world_pos = unreal.Vector(cx * CELL_SIZE_UU, cy * CELL_SIZE_UU, 0)
+        block = aas.spawn_actor_from_class(block_class, world_pos)
+        block.set_editor_property('cell_x', cx)
+        block.set_editor_property('cell_y', cy)
+        block.set_editor_property('seed', cx * 100 + cy + 500)
+        block.generate_buildings()
+
+lvl.save_current_level()
+print('[setup] City blocks: 8 blocks in 3x3 grid around origin (centre skipped)')
 print()
 print('Press Play.')
-print('WASD = move  |  Mouse = look  |  Space = jump')
-print()
-print('Press Play.')
-print('WASD = move  |  Mouse = look  |  Space = jump')
+print('WASD = move  |  Mouse = look  |  Space = jump  |  E = enter/exit car')

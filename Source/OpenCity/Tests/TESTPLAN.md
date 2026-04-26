@@ -71,11 +71,13 @@ Run after all automated tiers pass.
 |---|------|------|
 | 4.1 | Character movement feels responsive (no input lag) | ☐ |
 | 4.2 | Camera follows character smoothly, no jitter | ☐ |
-| 4.3 | Buildings are visible and correctly sized | ☐ |
-| 4.4 | Roads are visible and navigable on foot | ☐ |
-| 4.5 | Car driving feels weighty, not floaty | ☐ |
-| 4.6 | Chase camera realigns naturally behind car | ☐ |
-| 4.7 | Play for 60 seconds — no crash or freeze | ☐ |
+| 4.3 | Approach car — "Press E to enter car" tooltip appears | ☐ |
+| 4.4 | Press E — camera switches to car, character disappears | ☐ |
+| 4.5 | W/S drives forward/backward, A/D steers | ☐ |
+| 4.6 | Wheels visually spin while moving | ☐ |
+| 4.7 | Press E in car — character reappears beside car, on foot again | ☐ |
+| 4.8 | Buildings are visible and correctly sized | ☐ |
+| 4.9 | Play for 60 seconds — no crash or freeze | ☐ |
 
 ---
 

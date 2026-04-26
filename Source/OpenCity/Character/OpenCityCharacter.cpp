@@ -1,6 +1,7 @@
 #include "Character/OpenCityCharacter.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Engine/LocalPlayer.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -10,10 +11,11 @@
 #include "InputAction.h"
 #include "InputActionValue.h"
 #include "InputMappingContext.h"
+#include "Vehicle/CarPawn.h"
 
 AOpenCityCharacter::AOpenCityCharacter()
 {
-    PrimaryActorTick.bCanEverTick = false;
+    PrimaryActorTick.bCanEverTick = true;
 
     // Capsule: 34cm radius, 90cm half-height → 1.8m total height at 1m=100UU scale.
     GetCapsuleComponent()->InitCapsuleSize(34.f, 90.f);
@@ -30,9 +32,36 @@ AOpenCityCharacter::AOpenCityCharacter()
     GetCharacterMovement()->JumpZVelocity             = 600.f;
     GetCharacterMovement()->AirControl                = 0.35f;
 
+    // ── Simple geometry body ────────────────────────────────────────────────
+    // Cylinder: default mesh is 100cm diameter × 100cm tall.
+    // Scale (0.5, 0.5, 1.4) → 50cm wide, 140cm tall.
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderAsset(
+        TEXT("/Engine/BasicShapes/Cylinder"));
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereAsset(
+        TEXT("/Engine/BasicShapes/Sphere"));
+
+    BodyMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BodyMesh"));
+    BodyMesh->SetupAttachment(GetCapsuleComponent());
+    BodyMesh->SetRelativeLocation(FVector(0.f, 0.f, -15.f));
+    BodyMesh->SetRelativeScale3D(FVector(0.5f, 0.5f, 1.4f));
+    BodyMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    if (CylinderAsset.Succeeded())
+        BodyMesh->SetStaticMesh(CylinderAsset.Object);
+
+    // Sphere: default mesh is 100cm diameter.
+    // Scale (0.3, 0.3, 0.3) → 30cm head at top of body.
+    HeadMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HeadMesh"));
+    HeadMesh->SetupAttachment(GetCapsuleComponent());
+    HeadMesh->SetRelativeLocation(FVector(0.f, 0.f, 75.f));
+    HeadMesh->SetRelativeScale3D(FVector(0.3f, 0.3f, 0.3f));
+    HeadMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    if (SphereAsset.Succeeded())
+        HeadMesh->SetStaticMesh(SphereAsset.Object);
+
+    // ── Camera ──────────────────────────────────────────────────────────────
     CameraArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraArm"));
     CameraArm->SetupAttachment(RootComponent);
-    CameraArm->TargetArmLength        = 400.f;
+    CameraArm->TargetArmLength         = 400.f;
     CameraArm->bUsePawnControlRotation = true;
 
     FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
@@ -56,6 +85,9 @@ void AOpenCityCharacter::NotifyControllerChanged()
     if (!JumpAction)
         JumpAction = LoadObject<UInputAction>(nullptr, TEXT("/Game/Input/IA_Foot_Jump.IA_Foot_Jump"));
 
+    if (!InteractAction)
+        InteractAction = LoadObject<UInputAction>(nullptr, TEXT("/Game/Input/IA_Interact.IA_Interact"));
+
     if (auto* PC = Cast<APlayerController>(Controller))
     {
         if (auto* EIS = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
@@ -72,9 +104,22 @@ void AOpenCityCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
     {
         EIC->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AOpenCityCharacter::HandleMove);
         EIC->BindAction(LookAction, ETriggerEvent::Triggered, this, &AOpenCityCharacter::HandleLook);
-        EIC->BindAction(JumpAction, ETriggerEvent::Started,   this, &ACharacter::Jump);
-        EIC->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+        EIC->BindAction(JumpAction,     ETriggerEvent::Started,   this, &ACharacter::Jump);
+        EIC->BindAction(JumpAction,     ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+        EIC->BindAction(InteractAction, ETriggerEvent::Started,   this, &AOpenCityCharacter::HandleInteract);
     }
+}
+
+void AOpenCityCharacter::Tick(float /*DeltaSeconds*/)
+{
+    if (NearbyCar && IsValid(NearbyCar))
+        GEngine->AddOnScreenDebugMessage(1, 0.f, FColor::White, TEXT("Press E to enter car"));
+}
+
+void AOpenCityCharacter::HandleInteract(const FInputActionValue&)
+{
+    if (NearbyCar && IsValid(NearbyCar))
+        NearbyCar->EnterCar(this);
 }
 
 void AOpenCityCharacter::HandleMove(const FInputActionValue& Value)
