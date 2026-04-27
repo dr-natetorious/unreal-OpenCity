@@ -44,6 +44,6 @@ protected:
     virtual void BeginPlay() override;
 
 private:
-    UPROPERTY()
+    UPROPERTY(VisibleAnywhere, Category="OpenCity|City")
     TArray<TObjectPtr<ABuildingActor>> SpawnedBuildings;
 };

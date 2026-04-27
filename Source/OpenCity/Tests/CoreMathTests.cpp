@@ -196,6 +196,39 @@ bool FBuildingPlacerHeights::RunTest(const FString&)
     return true;
 }
 
+// ── BuildingPlacer: buildings stay within cell bounds ─────────────────────────
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FBuildingPlacerWithinBounds, "OpenCity.Core.BuildingPlacer.BuildingsWithinCellBounds",
+    EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FBuildingPlacerWithinBounds::RunTest(const FString&)
+{
+    const FCityGridParams      Grid{};
+    const FBuildingPlacerParams Bld{};
+
+    for (int32 CX : {-1, 0, 1, 4})
+    for (int32 CY : {-1, 0, 1, 4})
+    {
+        float XMin, XMax, YMin, YMax;
+        FCityGrid::CellBuildableRange(CX, Grid, XMin, XMax);
+        FCityGrid::CellBuildableRange(CY, Grid, YMin, YMax);
+
+        const TArray<FBuildingSpec> Buildings = FBuildingPlacer::PlaceInCell(CX, CY, Grid, Bld, 42u);
+        for (const FBuildingSpec& B : Buildings)
+        {
+            TestTrue(FString::Printf(TEXT("Cell(%d,%d) building X=%.0f >= XMin=%.0f"), CX, CY, B.WorldXCm, XMin),
+                B.WorldXCm >= XMin);
+            TestTrue(FString::Printf(TEXT("Cell(%d,%d) building X=%.0f <= XMax=%.0f"), CX, CY, B.WorldXCm, XMax),
+                B.WorldXCm <= XMax);
+            TestTrue(FString::Printf(TEXT("Cell(%d,%d) building Y=%.0f >= YMin=%.0f"), CX, CY, B.WorldYCm, YMin),
+                B.WorldYCm >= YMin);
+            TestTrue(FString::Printf(TEXT("Cell(%d,%d) building Y=%.0f <= YMax=%.0f"), CX, CY, B.WorldYCm, YMax),
+                B.WorldYCm <= YMax);
+        }
+    }
+    return true;
+}
+
 // ── VehicleParams: defaults are sane ─────────────────────────────────────────
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVehicleParamsValid, "OpenCity.Core.VehicleParams.DefaultsAreValid",

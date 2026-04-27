@@ -107,4 +107,14 @@ private:
     static constexpr float Acceleration  = 800.f;   // cm/s² input scale
     static constexpr float TurnRateDegS  = 90.f;    // degrees/s at full steer
     static constexpr float WheelRadiusCm = 35.f;
+
+#if WITH_AUTOMATION_TESTS
+public:
+    // Direct test helpers — not part of the gameplay API
+    void Test_SetThrottle(float V) { CurrentThrottle = V; }
+    void Test_TriggerExit()        { HandleInteract(FInputActionValue{}); }
+    bool Test_IsOccupied() const   { return OccupyingDriver != nullptr; }
+    void Test_Tick(float Dt)       { Tick(Dt); }
+private:
+#endif
 };

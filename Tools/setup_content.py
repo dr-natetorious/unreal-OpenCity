@@ -150,31 +150,44 @@ print('[setup] Floor: 200x200m at Z=-50, PlayerStart at Z=100')
 CELL_SIZE_UU = 10000
 
 block_class = unreal.load_class(None, '/Script/OpenCity.CityBlockActor')
+if not block_class:
+    print('[setup] ERROR: Could not load CityBlockActor class — is the module built?')
+else:
+    print(f'[setup] CityBlockActor class loaded: {block_class.get_name()}')
 
-# Collect already-placed blocks by (cell_x, cell_y) so the script stays idempotent
-existing_blocks = {}
-for actor in aas.get_all_level_actors():
-    if actor.get_class() == block_class:
-        cx = actor.get_editor_property('cell_x')
-        cy = actor.get_editor_property('cell_y')
-        existing_blocks[(cx, cy)] = actor
+    # Collect already-placed blocks by (cell_x, cell_y) so the script stays idempotent
+    existing_blocks = {}
+    for actor in aas.get_all_level_actors():
+        if actor.get_class() == block_class:
+            cx = actor.get_editor_property('cell_x')
+            cy = actor.get_editor_property('cell_y')
+            existing_blocks[(cx, cy)] = actor
+    print(f'[setup] Found {len(existing_blocks)} existing block(s) in level')
 
-for cx in range(-1, 2):
-    for cy in range(-1, 2):
-        if cx == 0 and cy == 0:
-            continue  # keep player spawn area clear
-        if (cx, cy) in existing_blocks:
-            continue  # already placed — skip
+    spawned_count = 0
+    for cx in range(-1, 2):
+        for cy in range(-1, 2):
+            if cx == 0 and cy == 0:
+                continue  # keep player spawn area clear
 
-        world_pos = unreal.Vector(cx * CELL_SIZE_UU, cy * CELL_SIZE_UU, 0)
-        block = aas.spawn_actor_from_class(block_class, world_pos)
-        block.set_editor_property('cell_x', cx)
-        block.set_editor_property('cell_y', cy)
-        block.set_editor_property('seed', cx * 100 + cy + 500)
-        block.generate_buildings()
+            if (cx, cy) in existing_blocks:
+                block = existing_blocks[(cx, cy)]
+            else:
+                world_pos = unreal.Vector(cx * CELL_SIZE_UU, cy * CELL_SIZE_UU, 0)
+                block = aas.spawn_actor_from_class(block_class, world_pos)
+                block.set_editor_property('cell_x', cx)
+                block.set_editor_property('cell_y', cy)
+                block.set_editor_property('seed', cx * 100 + cy + 500)
+                spawned_count += 1
 
-lvl.save_current_level()
-print('[setup] City blocks: 8 blocks in 3x3 grid around origin (centre skipped)')
+            block.generate_buildings()
+            bldg_count = len(block.get_editor_property('spawned_buildings'))
+            print(f'[setup]   cell ({cx:+d},{cy:+d}) → {bldg_count} buildings')
+
+    print(f'[setup] City blocks: {spawned_count} new, {len(existing_blocks)} existing (8 total)')
+
+    lvl.save_current_level()
+
 print()
 print('Press Play.')
 print('WASD = move  |  Mouse = look  |  Space = jump  |  E = enter/exit car')

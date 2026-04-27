@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Run the OpenCity automated test suite headlessly.
-# Tier 1 (no PIE) and Tier 2 (PIE with NullRHI) run here.
-# Exit 0 = all tests passed or project not yet built (first run).
+# Run the full OpenCity automated test suite headlessly.
+# All tiers (Core math, Spawn, Movement) run in a single pass.
+# New tests are auto-discovered — no changes to this script required.
+#
+# Exit 0 = all tests passed (or project not yet built on first run).
 # Exit 1 = one or more tests failed.
 set -euo pipefail
 
@@ -23,9 +25,10 @@ if [ ! -f "$BUILT_MODULE" ]; then
     exit 0
 fi
 
-echo "[run_tests] Starting Tier 1 (headless) test run..."
+echo "[run_tests] Running all OpenCity tests..."
 "$UE_EDITOR" "$UPROJECT" \
-    -ExecCmds="Automation RunTests OpenCity.Core;Quit" \
+    -Game \
+    -ExecCmds="Automation RunTests OpenCity;Quit" \
     -Unattended \
     -NullRHI \
     -NoSplash \
@@ -40,7 +43,6 @@ if [ ! -f "$REPORT" ]; then
     exit 1
 fi
 
-# Parse results with Python (available on all supported platforms)
 python3 - <<EOF
 import json, sys
 

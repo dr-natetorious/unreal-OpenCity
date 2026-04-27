@@ -5,9 +5,13 @@ ABuildingActor::ABuildingActor()
 {
     PrimaryActorTick.bCanEverTick = false;
 
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeAsset(
+        TEXT("/Engine/BasicShapes/Cube"));
+
     BodyMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BodyMesh"));
     SetRootComponent(BodyMesh);
     BodyMesh->SetCollisionProfileName(TEXT("BlockAll"));
+    if (CubeAsset.Succeeded()) BodyMesh->SetStaticMesh(CubeAsset.Object);
 }
 
 void ABuildingActor::SetSpec(const FBuildingSpec& Spec)

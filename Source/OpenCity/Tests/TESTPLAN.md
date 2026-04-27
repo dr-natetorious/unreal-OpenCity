@@ -49,17 +49,18 @@ UnrealEditor OpenCity.uproject -ExecCmds="Automation RunTests OpenCity.Spawn;Qui
 
 ## Tier 3 — Movement (automated, PIE)
 
-_Tests to be added as each system is implemented._
+Run with PIE active in the editor, or headlessly:
+```
+UnrealEditor OpenCity.uproject -ExecCmds="Automation RunTests OpenCity.Movement;Quit" -NullRHI -Unattended
+```
 
-| # | Test | Pass |
-|---|------|------|
-| 3.1 | Press W — character moves forward | ☐ |
-| 3.2 | Character does not fall through ground while walking | ☐ |
-| 3.3 | Approach a car — interact prompt appears | ☐ |
-| 3.4 | Enter car — pawn switches to ACarPawn | ☐ |
-| 3.5 | Throttle input — car accelerates forward | ☐ |
-| 3.6 | Car does not fall through ground while driving | ☐ |
-| 3.7 | Exit car — pawn switches back to AOpenCityCharacter | ☐ |
+| Test | Covers | Auto |
+|------|--------|------|
+| `OpenCity.Movement.Car.EnterCar` | PC possesses ACarPawn after EnterCar | ✓ |
+| `OpenCity.Movement.Car.ExitCar` | PC re-possesses AOpenCityCharacter after exit | ✓ |
+| `OpenCity.Movement.Car.MovesOnThrottle` | Car position changes > 10 cm after 0.1 s at full throttle | ✓ |
+
+_Tests spawn their own temporary actors — no level content required._
 
 ---
 
