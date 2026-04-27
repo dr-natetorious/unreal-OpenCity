@@ -13,6 +13,12 @@ void ACityBlockActor::BeginPlay()
     GenerateBuildings();
 }
 
+void ACityBlockActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    ClearBuildings();
+    Super::EndPlay(EndPlayReason);
+}
+
 void ACityBlockActor::ClearBuildings()
 {
     for (TObjectPtr<ABuildingActor>& B : SpawnedBuildings)

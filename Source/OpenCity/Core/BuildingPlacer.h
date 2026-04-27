@@ -76,7 +76,10 @@ struct OPENCITY_API FBuildingPlacer
         float CenterXCm, float CenterYCm,
         float RadiusCm);
 
-private:
+    // Seed mixer — public so the streaming subsystem derives per-cell seeds
+    // using the same hash as PlaceInCell.
     static uint32 MixSeed(int32 CellX, int32 CellY, uint32 BaseSeed);
+
+private:
     static float RandRangeF(uint32& Seed, float Min, float Max);
 };

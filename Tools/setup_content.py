@@ -121,73 +121,32 @@ imc_v.set_editor_property('mappings', [
 eal.save_asset('/Game/Input/IMC_Vehicle')
 print('[setup] IMC_Vehicle: W/S throttle, A/D steer, E exit')
 
-# ── Floor (add to current level if not already present) ───────────────────────
+# ── Level actors ───────────────────────────────────────────────────────────────
+# The static floor and city blocks are gone — UCityStreamingSubsystem handles
+# both at runtime, tiling infinitely around the player.
+# This section only places actors that must be in the level persistently.
 
-existing = [a for a in aas.get_all_level_actors() if a.get_actor_label() == 'Floor']
-if existing:
-    floor = existing[0]
-else:
-    cube_mesh = unreal.load_asset('/Engine/BasicShapes/Cube')
-    floor = aas.spawn_actor_from_object(cube_mesh, unreal.Vector(0, 0, -50))
-    floor.set_actor_label('Floor')
-
-floor.set_actor_scale3d(unreal.Vector(200, 200, 1))
-floor.root_component.set_editor_property('mobility', unreal.ComponentMobility.MOVABLE)
-
-# Ensure PlayerStart is above floor
+# PlayerStart — ensure it's above Z=0 so the character spawns above the first floor tile
 for actor in aas.get_all_level_actors():
     if actor.get_class().get_name() == 'PlayerStart':
         actor.set_actor_location(unreal.Vector(0, 0, 100), False, False)
         break
 
-lvl.save_current_level()
-print('[setup] Floor: 200x200m at Z=-50, PlayerStart at Z=100')
-
-# ── City blocks (3×3 grid, skip centre — that's the player spawn area) ────────
-
-# CityBlockActor world position: each cell is 10,000 UU (100m) wide
-# Cell (cx,cy) → world offset (cx*10000, cy*10000, 0)
-CELL_SIZE_UU = 10000
-
-block_class = unreal.load_class(None, '/Script/OpenCity.CityBlockActor')
-if not block_class:
-    print('[setup] ERROR: Could not load CityBlockActor class — is the module built?')
+# Car — one near spawn so there's always something to drive
+car_class = unreal.load_class(None, '/Script/OpenCity.CarPawn')
+if car_class:
+    existing_cars = [a for a in aas.get_all_level_actors() if a.get_class() == car_class]
+    if not existing_cars:
+        car = aas.spawn_actor_from_class(car_class, unreal.Vector(300, 0, 100))
+        car.set_actor_label('PlayerCar')
+        print('[setup] Car: spawned at (300, 0, 100)')
+    else:
+        print(f'[setup] Car: {len(existing_cars)} already in level — skipped')
 else:
-    print(f'[setup] CityBlockActor class loaded: {block_class.get_name()}')
+    print('[setup] WARNING: Could not load CarPawn class')
 
-    # Collect already-placed blocks by (cell_x, cell_y) so the script stays idempotent
-    existing_blocks = {}
-    for actor in aas.get_all_level_actors():
-        if actor.get_class() == block_class:
-            cx = actor.get_editor_property('cell_x')
-            cy = actor.get_editor_property('cell_y')
-            existing_blocks[(cx, cy)] = actor
-    print(f'[setup] Found {len(existing_blocks)} existing block(s) in level')
-
-    spawned_count = 0
-    for cx in range(-1, 2):
-        for cy in range(-1, 2):
-            if cx == 0 and cy == 0:
-                continue  # keep player spawn area clear
-
-            if (cx, cy) in existing_blocks:
-                block = existing_blocks[(cx, cy)]
-            else:
-                world_pos = unreal.Vector(cx * CELL_SIZE_UU, cy * CELL_SIZE_UU, 0)
-                block = aas.spawn_actor_from_class(block_class, world_pos)
-                block.set_editor_property('cell_x', cx)
-                block.set_editor_property('cell_y', cy)
-                block.set_editor_property('seed', cx * 100 + cy + 500)
-                spawned_count += 1
-
-            block.generate_buildings()
-            bldg_count = len(block.get_editor_property('spawned_buildings'))
-            print(f'[setup]   cell ({cx:+d},{cy:+d}) → {bldg_count} buildings')
-
-    print(f'[setup] City blocks: {spawned_count} new, {len(existing_blocks)} existing (8 total)')
-
-    lvl.save_current_level()
-
+lvl.save_current_level()
+print('[setup] Level saved')
 print()
-print('Press Play.')
+print('Press Play — city streams in automatically around the player.')
 print('WASD = move  |  Mouse = look  |  Space = jump  |  E = enter/exit car')
