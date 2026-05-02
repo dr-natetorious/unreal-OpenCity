@@ -2,6 +2,7 @@
 #include "Core/CityGrid.h"
 #include "Core/BuildingPlacer.h"
 #include "Core/VehicleParams.h"
+#include "Core/PedestrianParams.h"
 
 // Tier 1 — No PIE required. Tests run headlessly with -NullRHI.
 // Run: UnrealEditor OpenCity.uproject -ExecCmds="Automation RunTests OpenCity.Core" -NullRHI -Unattended
@@ -269,5 +270,79 @@ bool FVehicleParamsWheelPositions::RunTest(const FString&)
     for (const FVector& W : Wheels)
         TestTrue(FString::Printf(TEXT("Wheel Z=%.1f > 0"), W.Z), W.Z > 0.f);
 
+    return true;
+}
+
+// ── PedestrianPlacer ──────────────────────────────────────────────────────────
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPedestrianParamsValid, "OpenCity.Core.Pedestrian.DefaultParamsAreValid",
+    EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FPedestrianParamsValid::RunTest(const FString&)
+{
+    const FPedestrianParams P{};
+    TestTrue(TEXT("Default params are valid"),       P.AreValid());
+    TestTrue(TEXT("PerCell > 0"),                    P.PerCell > 0);
+    TestTrue(TEXT("WalkSpeedCmS > 0"),               P.WalkSpeedCmS > 0.f);
+    TestTrue(TEXT("WaypointReachRadiusCm > 0"),      P.WaypointReachRadiusCm > 0.f);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPedestrianPlacerCount, "OpenCity.Core.Pedestrian.PlaceInCellReturnsPerCell",
+    EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FPedestrianPlacerCount::RunTest(const FString&)
+{
+    const FCityGridParams   Grid{};
+    const FPedestrianParams Ped{};
+
+    const TArray<FPedestrianWaypoints> Routes = FPedestrianPlacer::PlaceInCell(0, 0, Grid, Ped, 42u);
+    TestEqual(TEXT("PlaceInCell returns exactly PerCell routes"), Routes.Num(), Ped.PerCell);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPedestrianPlacerOnSidewalk, "OpenCity.Core.Pedestrian.WaypointsAreOnSidewalk",
+    EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FPedestrianPlacerOnSidewalk::RunTest(const FString&)
+{
+    const FCityGridParams   Grid{};
+    const FPedestrianParams Ped{};
+
+    float MinXCm, MaxXCm, MinYCm, MaxYCm;
+    FCityGrid::CellBuildableRange(0, Grid, MinXCm, MaxXCm);
+    FCityGrid::CellBuildableRange(0, Grid, MinYCm, MaxYCm);
+
+    const TArray<FPedestrianWaypoints> Routes = FPedestrianPlacer::PlaceInCell(0, 0, Grid, Ped, 42u);
+    for (int32 i = 0; i < Routes.Num(); ++i)
+    {
+        const FVector2D& S = Routes[i].Start;
+        const FVector2D& E = Routes[i].End;
+        // Each waypoint must be outside the buildable rectangle on at least one axis.
+        const bool StartOutside = S.X < MinXCm || S.X > MaxXCm || S.Y < MinYCm || S.Y > MaxYCm;
+        const bool EndOutside   = E.X < MinXCm || E.X > MaxXCm || E.Y < MinYCm || E.Y > MaxYCm;
+        TestTrue(FString::Printf(TEXT("Route[%d] Start is on sidewalk (outside buildable zone)"), i), StartOutside);
+        TestTrue(FString::Printf(TEXT("Route[%d] End is on sidewalk (outside buildable zone)"), i), EndOutside);
+    }
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPedestrianPlacerDeterministic, "OpenCity.Core.Pedestrian.SameSeedSameResult",
+    EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FPedestrianPlacerDeterministic::RunTest(const FString&)
+{
+    const FCityGridParams   Grid{};
+    const FPedestrianParams Ped{};
+
+    const auto A = FPedestrianPlacer::PlaceInCell(3, -7, Grid, Ped, 42u);
+    const auto B = FPedestrianPlacer::PlaceInCell(3, -7, Grid, Ped, 42u);
+
+    TestEqual(TEXT("Same seed → same route count"), A.Num(), B.Num());
+    for (int32 i = 0; i < A.Num(); ++i)
+    {
+        TestEqual(FString::Printf(TEXT("Route[%d] Start.X matches"), i), A[i].Start.X, B[i].Start.X);
+        TestEqual(FString::Printf(TEXT("Route[%d] End.Y matches"),   i), A[i].End.Y,   B[i].End.Y);
+    }
     return true;
 }

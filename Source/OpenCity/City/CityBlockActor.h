@@ -3,9 +3,11 @@
 #include "GameFramework/Actor.h"
 #include "Core/CityGrid.h"
 #include "Core/BuildingPlacer.h"
+#include "Core/PedestrianParams.h"
 #include "CityBlockActor.generated.h"
 
 class ABuildingActor;
+class APedestrianCharacter;
 
 // Spawns and owns all buildings for one city cell.
 // Place in the level and set CellX/CellY; call GenerateBuildings() or let BeginPlay do it.
@@ -32,13 +34,17 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="OpenCity|City")
     int32 Seed = 42;
 
-    // (Re)generate buildings. Safe to call from editor or at runtime.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="OpenCity|NPC")
+    FPedestrianParams PedestrianParams;
+
+    // (Re)generate buildings and pedestrians. Safe to call from editor or at runtime.
     UFUNCTION(CallInEditor, BlueprintCallable, Category="OpenCity|City")
     void GenerateBuildings();
 
     void ClearBuildings();
 
-    const TArray<TObjectPtr<ABuildingActor>>& GetBuildings() const { return SpawnedBuildings; }
+    const TArray<TObjectPtr<ABuildingActor>>&    GetBuildings()   const { return SpawnedBuildings; }
+    const TArray<TObjectPtr<APedestrianCharacter>>& GetPedestrians() const { return SpawnedPedestrians; }
 
 protected:
     virtual void BeginPlay() override;
@@ -47,4 +53,10 @@ protected:
 private:
     UPROPERTY(VisibleAnywhere, Category="OpenCity|City")
     TArray<TObjectPtr<ABuildingActor>> SpawnedBuildings;
+
+    UPROPERTY(VisibleAnywhere, Category="OpenCity|NPC")
+    TArray<TObjectPtr<APedestrianCharacter>> SpawnedPedestrians;
+
+    void SpawnPedestrians();
+    void ClearPedestrians();
 };

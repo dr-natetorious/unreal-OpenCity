@@ -5,6 +5,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Character/OpenCityCharacter.h"
+#include "Character/PedestrianCharacter.h"
 #include "City/CityBlockActor.h"
 #include "City/BuildingActor.h"
 #include "City/CityStreamingSubsystem.h"
@@ -287,6 +288,102 @@ bool FStreamingUnloadDestroysBuildings::RunTest(const FString&)
 
     for (ABuildingActor* B : RawBuildings)
         TestTrue(TEXT("BuildingActor is pending kill after block destroy"), !IsValid(B));
+
+    return true;
+}
+
+// ── Pedestrians ───────────────────────────────────────────────────────────────
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSpawnPedestrianCount, "OpenCity.Spawn.Pedestrian.CountMatchesPerCell",
+    EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FSpawnPedestrianCount::RunTest(const FString&)
+{
+    UWorld* W = GetTestWorld();
+    if (!TestNotNull(TEXT("Game world exists"), W)) return false;
+
+    FActorSpawnParameters P;
+    P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    ACityBlockActor* Block = W->SpawnActor<ACityBlockActor>(ACityBlockActor::StaticClass(),
+        FVector(110000.f, 110000.f, 0.f), FRotator::ZeroRotator, P);
+    if (!TestNotNull(TEXT("CityBlockActor spawned"), Block)) return false;
+
+    Block->CellX = 11;
+    Block->CellY = 11;
+    Block->Seed  = 42;
+    Block->GenerateBuildings();
+
+    const int32 Expected = Block->PedestrianParams.PerCell;
+    const int32 Actual   = Block->GetPedestrians().Num();
+    TestEqual(FString::Printf(TEXT("Pedestrian count %d == PerCell %d"), Actual, Expected), Actual, Expected);
+
+    Block->Destroy();
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSpawnPedestrianAboveGround, "OpenCity.Spawn.Pedestrian.AboveGround",
+    EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FSpawnPedestrianAboveGround::RunTest(const FString&)
+{
+    UWorld* W = GetTestWorld();
+    if (!TestNotNull(TEXT("Game world exists"), W)) return false;
+
+    FActorSpawnParameters P;
+    P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    ACityBlockActor* Block = W->SpawnActor<ACityBlockActor>(ACityBlockActor::StaticClass(),
+        FVector(120000.f, 120000.f, 0.f), FRotator::ZeroRotator, P);
+    if (!TestNotNull(TEXT("CityBlockActor spawned"), Block)) return false;
+
+    Block->CellX = 12;
+    Block->CellY = 12;
+    Block->Seed  = 99;
+    Block->GenerateBuildings();
+
+    for (const TObjectPtr<APedestrianCharacter>& Ped : Block->GetPedestrians())
+    {
+        if (!Ped) continue;
+        const float Z = Ped->GetActorLocation().Z;
+        TestTrue(FString::Printf(TEXT("Pedestrian Z=%.1fcm > -10cm (not through floor)"), Z), Z > -10.f);
+    }
+
+    Block->Destroy();
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSpawnPedestrianDestroyedWithBlock, "OpenCity.Spawn.Pedestrian.DestroyedWithBlock",
+    EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FSpawnPedestrianDestroyedWithBlock::RunTest(const FString&)
+{
+    UWorld* W = GetTestWorld();
+    if (!TestNotNull(TEXT("Game world exists"), W)) return false;
+
+    FActorSpawnParameters P;
+    P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    ACityBlockActor* Block = W->SpawnActor<ACityBlockActor>(ACityBlockActor::StaticClass(),
+        FVector(130000.f, 130000.f, 0.f), FRotator::ZeroRotator, P);
+    if (!TestNotNull(TEXT("CityBlockActor spawned"), Block)) return false;
+
+    Block->CellX = 13;
+    Block->CellY = 13;
+    Block->Seed  = 77;
+    Block->GenerateBuildings();
+
+    if (!TestTrue(TEXT("Block has pedestrians before destroy"), Block->GetPedestrians().Num() > 0))
+    {
+        Block->Destroy();
+        return false;
+    }
+
+    TArray<APedestrianCharacter*> RawPedestrians;
+    for (const TObjectPtr<APedestrianCharacter>& Ped : Block->GetPedestrians())
+        if (Ped) RawPedestrians.Add(Ped.Get());
+
+    Block->Destroy(); // triggers EndPlay → ClearBuildings → ClearPedestrians
+
+    for (APedestrianCharacter* Ped : RawPedestrians)
+        TestTrue(TEXT("PedestrianCharacter is pending kill after block destroy"), !IsValid(Ped));
 
     return true;
 }
