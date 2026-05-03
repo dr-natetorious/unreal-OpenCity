@@ -150,3 +150,103 @@ print('[setup] Level saved')
 print()
 print('Press Play — city streams in automatically around the player.')
 print('WASD = move  |  Mouse = look  |  Space = jump  |  E = enter/exit car')
+
+# ── setup_level(label) ─────────────────────────────────────────────────────────
+# Adds sun, sky, fog, a floor plane, and a PlayerStart to the current map.
+# Call this after opening any new map that needs basic lighting.
+#
+# Usage (UE Output Log, Python mode):
+#   exec(open('/apps/git/unreal-OpenCity/Tools/setup_content.py').read())
+#   setup_level('GASTest')
+
+def setup_level(label='Level'):
+    actors = aas.get_all_level_actors()
+    class_names = {a.get_class().get_name() for a in actors}
+
+    def has(cls_name):
+        return cls_name in class_names
+
+    def spawn_if_missing(cls_path, actor_label, location=unreal.Vector(0,0,0)):
+        cls = unreal.load_class(None, cls_path)
+        if not cls:
+            print(f'[setup_level] WARNING: could not load {cls_path}')
+            return None
+        actor = aas.spawn_actor_from_class(cls, location)
+        if actor:
+            actor.set_actor_label(actor_label)
+            print(f'[setup_level] Spawned {actor_label}')
+        return actor
+
+    # Directional light (sun) — 45-degree pitch so shadows are visible
+    if not has('DirectionalLight'):
+        sun = spawn_if_missing('/Script/Engine.DirectionalLight', 'SunLight',
+                               unreal.Vector(0, 0, 300))
+        if sun:
+            sun.set_actor_rotation(unreal.Rotator(-45, -60, 0), False)
+            comp = sun.get_component_by_class(unreal.DirectionalLightComponent)
+            if comp:
+                comp.set_editor_property('intensity', 10.0)
+                comp.set_editor_property('light_color', unreal.Color(255, 247, 225, 255))
+                comp.set_editor_property('atmosphere_sun_light', True)
+    else:
+        print('[setup_level] DirectionalLight: already present — skipped')
+
+    # Sky atmosphere
+    if not has('SkyAtmosphere'):
+        spawn_if_missing('/Script/Engine.SkyAtmosphere', 'SkyAtmosphere')
+    else:
+        print('[setup_level] SkyAtmosphere: already present — skipped')
+
+    # Sky light (real-time capture)
+    if not has('SkyLight'):
+        sky = spawn_if_missing('/Script/Engine.SkyLight', 'SkyLight')
+        if sky:
+            comp = sky.get_component_by_class(unreal.SkyLightComponent)
+            if comp:
+                comp.set_editor_property('real_time_capture', True)
+    else:
+        print('[setup_level] SkyLight: already present — skipped')
+
+    # Exponential height fog
+    if not has('ExponentialHeightFog'):
+        fog = spawn_if_missing('/Script/Engine.ExponentialHeightFog', 'HeightFog',
+                               unreal.Vector(0, 0, 100))
+        if fog:
+            comp = fog.get_component_by_class(unreal.ExponentialHeightFogComponent)
+            if comp:
+                comp.set_editor_property('fog_density', 0.02)
+    else:
+        print('[setup_level] ExponentialHeightFog: already present — skipped')
+
+    # Floor plane — 10,000 x 10,000 cm (100 m) flat surface
+    if not any(a.get_actor_label() == 'TestFloor' for a in actors):
+        floor_mesh = unreal.load_object(None, '/Engine/BasicShapes/Plane.Plane')
+        floor_cls  = unreal.load_class(None, '/Script/Engine.StaticMeshActor')
+        if floor_cls and floor_mesh:
+            floor = aas.spawn_actor_from_class(floor_cls, unreal.Vector(0, 0, 0))
+            if floor:
+                floor.set_actor_label('TestFloor')
+                floor.set_actor_scale3d(unreal.Vector(100, 100, 1))
+                mesh_comp = floor.get_component_by_class(unreal.StaticMeshComponent)
+                if mesh_comp:
+                    mesh_comp.set_static_mesh(floor_mesh)
+                print('[setup_level] TestFloor: 100x100m plane at origin')
+    else:
+        print('[setup_level] TestFloor: already present — skipped')
+
+    # PlayerStart — move to Z=100 so character spawns above the floor
+    for actor in aas.get_all_level_actors():
+        if actor.get_class().get_name() == 'PlayerStart':
+            actor.set_actor_location(unreal.Vector(0, 0, 100), False, False)
+            print('[setup_level] PlayerStart: moved to (0,0,100)')
+            break
+    else:
+        ps_cls = unreal.load_class(None, '/Script/Engine.PlayerStart')
+        if ps_cls:
+            ps = aas.spawn_actor_from_class(ps_cls, unreal.Vector(0, 0, 100))
+            if ps:
+                ps.set_actor_label('PlayerStart')
+                print('[setup_level] PlayerStart: spawned at (0,0,100)')
+
+    lvl.save_current_level()
+    print(f'[setup_level] {label}: lighting + floor setup complete. Level saved.')

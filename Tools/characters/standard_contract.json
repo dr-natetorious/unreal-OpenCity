@@ -1,0 +1,81 @@
+{
+    "base_character": {
+        "armature_name": "SK_Armature",
+        "primary_mesh_object": "SK_CityCharacter",
+        "source_blend": "/apps/git/unreal-OpenCity/Content/Props/BaseCharacter.blend",
+        "exported_fbx": "/apps/git/unreal-OpenCity/Content/Props/Characters/SK_CityCharacter.fbx",
+        "unreal_mesh_path": "/Game/Props/Characters/SK_CityCharacter.SK_CityCharacter",
+        "unreal_shirt_material_path": "/Game/Props/Characters/M_Shirt.M_Shirt",
+        "required_material_slots": [
+            "M_Skin",
+            "M_Face",
+            "M_Shirt",
+            "M_Pants",
+            "M_Shoes"
+        ],
+        "required_helper_bones": [
+            "HatSocket",
+            "LeftHandAccessorySocket",
+            "RightHandAccessorySocket"
+        ],
+        "required_attachment_points": {
+            "HatSocket": {
+                "parent_bone": "head",
+                "location": [0.0, 0.12, 0.0],
+                "rotation": [0.0, 0.0, 0.0],
+                "scale": [1.0, 1.0, 1.0]
+            },
+            "LeftHandAccessorySocket": {
+                "parent_bone": "hand_l",
+                "location": [0.0, 0.0, 0.0],
+                "rotation": [85.4816, 15.3642, -16.6102],
+                "scale": [1.0, 1.0, 1.0]
+            },
+            "RightHandAccessorySocket": {
+                "parent_bone": "hand_r",
+                "location": [0.0, 0.0, 0.0],
+                "rotation": [85.4816, -15.3642, 16.6102],
+                "scale": [1.0, 1.0, 1.0]
+            }
+        }
+    },
+    "skeleton": {
+        "required_bones": [
+            "root",
+            "pelvis",
+            "spine",
+            "head",
+            "upperarm_l",
+            "forearm_l",
+            "hand_l",
+            "upperarm_r",
+            "forearm_r",
+            "hand_r",
+            "prop_r",
+            "thigh_l",
+            "calf_l",
+            "foot_l",
+            "thigh_r",
+            "calf_r",
+            "foot_r"
+        ],
+        "required_bone_count": 17,
+        "armature_at_origin": true
+    },
+    "binding": {
+        "require_armature_modifier": true,
+        "require_vertex_groups": true,
+        "allow_bone_parenting_as_final": false
+    },
+    "actions": {
+        "base": [],
+        "firefighter": [
+            "AN_FF_Walk_Basic",
+            "AN_FF_Chop_Door"
+        ],
+        "police": [
+            "AN_PO_Walk_Basic",
+            "AN_PO_Arrest"
+        ]
+    }
+}

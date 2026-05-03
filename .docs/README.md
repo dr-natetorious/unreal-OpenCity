@@ -7,6 +7,7 @@ This folder captures architecture and system decisions for OpenCity.
 - ADR-001: Layered Architecture and Data Ownership (`ADR-001-layered-architecture.md`)
 - ADR-002: Runtime Data Flow (Spawn, Streaming, Interaction) (`ADR-002-runtime-data-flow.md`)
 - ADR-003: UML Class Structure and Relationships (`ADR-003-uml-structure.md`)
+- ADR-004: GAS Foundation — Character Division System (`ADR-004-gas-character-division-system.md`)
 
 ## Scope
 
@@ -16,6 +17,7 @@ These docs describe current implementation decisions in `Source/OpenCity`:
 - Actor and subsystem wrappers around Core
 - Input, possession, and movement flow
 - Procedural city streaming and building spawn lifecycle
+- GAS character division and capability system
 
 ## Update Rule
 

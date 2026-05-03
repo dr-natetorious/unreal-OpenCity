@@ -16,10 +16,14 @@ public class OpenCity : ModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "UMG",
             "InputCore",
             "EnhancedInput",
             "ChaosVehicles",
             "PhysicsCore",
+            "GameplayAbilities",
+            "GameplayTags",
+            "GameplayTasks",
         });
 
         PrivateDependencyModuleNames.AddRange(new string[]

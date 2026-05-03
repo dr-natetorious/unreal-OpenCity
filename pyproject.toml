@@ -1,0 +1,26 @@
+[project]
+name = "opencity-tools"
+version = "0.1.0"
+description = "Python bridge tooling for OpenCity content pipelines"
+requires-python = ">=3.11"
+dependencies = [
+    "blender-mcp",
+    "httpx>=0.27.0",
+    "pydantic>=2.8.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "ruff>=0.6.0",
+]
+
+[tool.uv.sources]
+blender-mcp = { path = "../ahujasid/blender-mcp", editable = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["Tools/python/tests"]
